@@ -1,23 +1,23 @@
 # Mindful News — Scraper & Classifier
 
-Uruguayan news headline pipeline (Fase 1–2 of [mindful-news.md](./mindful-news.md)).  
+Uruguayan news headline pipeline ([mindful-news.md](./mindful-news.md)).  
 **Estado y próximos pasos:** [STATUS.md](./STATUS.md)
 
 **Sources:** Montevideo Portal · El País · La Diaria · El Observador
 
-Each headline stores: `titulo`, `url`, `thumbnail_url`, `fecha`, `medio`, `seccion`, plus GPT labels `tema` / `carga`.
+Each headline stores: `titulo`, `url`, `thumbnail_url`, `fecha`, `medio`, `seccion`, plus labels `tema` / `carga`.
 
 ## Setup
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 playwright install chromium
 cp .env.example .env   # add OPENAI_API_KEY
-brew services start mysql   # or: docker compose up -d
+docker compose up -d mysql   # or local MySQL on :3306
 ```
 
-## Usage
+## Usage — scraping & GPT tagging
 
 ```bash
 # Dry run
@@ -30,7 +30,7 @@ python scripts/scrape_bulk.py
 # Classify all unclassified headlines (~25 per API call, gpt-5.4-mini)
 python scripts/classify.py
 
-# Hourly live updates
+# Hourly live updates (scrape only)
 python scripts/scrape_hourly.py
 
 # Inspect DB
@@ -63,6 +63,9 @@ python scripts/tune_models.py --task all --phase 2 --trials 30
 # Phase 3: corrected search around phase-1 winners (15 trials/task)
 python scripts/tune_models.py --task all --phase 3 --trials 15 --no-resume
 
+# Phase 4: temas with seccion+título input (30 trials)
+python scripts/tune_models.py --task temas --phase 4 --trials 30
+
 # Resume after interrupt (same command; sqlite study in data/tuning/)
 python scripts/tune_models.py --task temas --phase 2 --trials 30
 
@@ -71,18 +74,113 @@ python scripts/train_temas.py
 python scripts/train_carga.py
 ```
 
-Resume artifacts: `data/tuning/{temas,carga}.db`, `{task}_study.json`, `{task}_best.json`.  
-Trial checkpoints: `models/tuning/{task}/trial-NNN/`. Final models: `models/{temas,carga}/`.
+Production models: `models/temas-phase4/` (temas) · `models/carga-phase3/` (carga).  
+Resume artifacts: `data/tuning/{task}_phase{N}_best.json`, trial checkpoints in `models/tuning/`.
+
+Analysis notebooks: `notebooks/01_eda` … `04_checks_finales`.
+
+## API (Fase 4)
+
+```bash
+pip install -r requirements-api.txt
+python scripts/run_api.py
+# Swagger: http://localhost:8000/docs
+```
+
+Endpoints:
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/health` | Liveness (`models_loaded`) |
+| GET | `/ready` | Readiness (503 hasta cargar modelos) |
+| POST | `/predict` | `{ "titulo", "seccion?" }` → tema + carga |
+| POST | `/predict/batch` | Async batch → `job_id` |
+| GET | `/predict/batch/{id}` | Resultados del job |
+
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"titulo": "Balacera en el Cerro", "seccion": "Noticias, Policiales"}'
+```
+
+Tests (sin cargar modelos reales):
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest tests/ -q
+```
+
+## Portal + poller (Fase 5)
+
+```bash
+pip install -r requirements-portal.txt
+
+# Terminal 1 — API (si no corre ya)
+python scripts/run_api.py
+
+# Terminal 2 — portal Streamlit
+python scripts/run_portal.py
+# → http://localhost:8501
+
+# Poller: scrape + clasificar vía API cada hora
+python scripts/run_poller.py --once          # un ciclo
+python scripts/run_poller.py                 # loop cada 1 h
+```
+
+El poller toma titulares sin clasificar de MySQL, los manda a `POST /predict/batch` y guarda `tema`/`carga` del modelo ML.
+
+## Docker — stack completo
+
+Requiere modelos entrenados en `models/temas-phase4/` y `models/carga-phase3/`.
+
+**Incremental (recomendado):**
+
+```powershell
+# Windows — un paso a la vez, espera health entre cada uno
+.\scripts\docker_up.ps1 -Step mysql   # ~30s
+.\scripts\docker_up.ps1 -Step api     # primera build ~10-15 min
+.\scripts\docker_up.ps1 -Step portal  # opcional
+.\scripts\docker_up.ps1 -Step poller  # opcional
+```
+
+**Todo junto (solo mysql + api por defecto; portal/poller con profile):**
+
+```bash
+docker compose up --build -d              # mysql + api
+docker compose --profile portal up -d     # + Streamlit
+docker compose --profile poller up -d     # + poller horario
+```
+
+| Servicio | Puerto | Rol |
+|----------|--------|-----|
+| `mysql` | 3306 | Base de datos |
+| `api` | 8000 | FastAPI + mmBERT |
+| `portal` | 8501 | Streamlit |
+| `poller` | — | Scrape + clasificación horaria |
+
+Solo MySQL: `docker compose up -d mysql`  
+Solo API: `docker compose up --build api`
+
+Variables útiles (`.env`): `API_BASE_URL`, `DB_HOST`, `MODEL_TEMAS_PATH`, `MODEL_CARGA_PATH`.
 
 ## Layout
 
 ```
-config.yml              # targets, DB, models
-scripts/                # CLI entry points
+config.yml
+scripts/                  # CLI entry points
+notebooks/                # EDA, training, sanity checks
+portal/app.py             # Streamlit UI
 mindful_news/
-  db.py                 # MySQL
-  scrape/               # one module per source
-  classify/             # GPT batch labeling
+  db.py                   # MySQL
+  inference.py            # predictor compartido train ↔ serve
+  api/                    # FastAPI
+  portal/                 # poller + cliente API
+  scrape/                 # one module per source
+  classify/               # GPT batch labeling
+  training/               # fine-tuning + evaluate
+models/
+  temas-phase4/           # producción temas
+  carga-phase3/           # producción carga
 ```
 
 ## Scraping strategy

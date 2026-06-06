@@ -617,4 +617,256 @@ for label, path in [("Fase 1 (solo título)", phase1_best), ("Fase 4 (sección+t
     ],
 )
 
+# --- 4. Final checks (1, 2, 5) ---
+write(
+    "04_checks_finales.ipynb",
+    [
+        md(
+            "# Checks finales post-training\n\n"
+            "Validación de los modelos de **producción** antes de servir la API:\n\n"
+            "| # | Check | Qué mide |\n"
+            "|---|-------|----------|\n"
+            "| **1** | Sanity check modelos finales | Errores en test con `temas-phase4` + `carga-phase3` |\n"
+            "| **2** | Antes/después temas | Fase 1 (solo título) vs Fase 4 (sección+título) |\n"
+            "| **5** | Regresión por clase | F1 por tema: ¿mejoró cada clase o alguna empeoró? |\n\n"
+            "> Reiniciá el kernel si editaste código del proyecto recientemente."
+        ),
+        code(
+            SETUP
+            + """
+import importlib
+import json
+
+import mindful_news.training.evaluate as _evaluate
+importlib.reload(_evaluate)
+
+from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix, f1_score
+
+from mindful_news.training.evaluate import _default_model_dir, predict_test_errors
+
+FINAL_MODELS = {
+    "temas": ROOT / "models" / "temas-phase4",
+    "carga": ROOT / "models" / "carga-phase3",
+}
+BASELINE_TEMAS = ROOT / "models" / "temas"
+
+for task, path in FINAL_MODELS.items():
+    assert path.exists(), f"Modelo final no encontrado: {path}"
+print("Modelos finales OK")
+"""
+        ),
+        md("## Check 1 — Sanity check modelos finales"),
+        code(
+            """results_final = {}
+summary_rows = []
+
+for task, model_dir in FINAL_MODELS.items():
+    frame = predict_test_errors(task, model_dir=model_dir)
+    results_final[task] = frame
+    errors = (~frame["correct"]).sum()
+    acc = frame["correct"].mean()
+    summary_rows.append(
+        {
+            "task": task,
+            "model": str(model_dir),
+            "n_test": len(frame),
+            "errors": errors,
+            "error_rate": 1 - acc,
+            "accuracy": acc,
+        }
+    )
+    print(f"{task}: {errors}/{len(frame)} errores ({1-acc:.1%})")
+
+pd.DataFrame(summary_rows)
+"""
+        ),
+        code(
+            """fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+
+for ax, task in zip(axes, FINAL_MODELS):
+    frame = results_final[task]
+    labels = sorted(frame["true_label"].unique())
+    cm = confusion_matrix(frame["true_label"], frame["pred_label"], labels=labels)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
+    disp.plot(ax=ax, cmap="Blues", xticks_rotation=45, colorbar=False)
+    ax.set_title(f"Check 1 — {task} (modelo final)")
+
+plt.tight_layout()
+plt.show()
+"""
+        ),
+        code(
+            """def top_confusion_pairs(frame: pd.DataFrame, n: int = 8) -> pd.DataFrame:
+    errors = frame[~frame["correct"]]
+    return (
+        errors.groupby(["true_label", "pred_label"])
+        .size()
+        .reset_index(name="count")
+        .sort_values("count", ascending=False)
+        .head(n)
+    )
+
+
+for task in FINAL_MODELS:
+    print(f"\\n=== {task.upper()} — pares de confusión (final) ===")
+    display(top_confusion_pairs(results_final[task]))
+"""
+        ),
+        code(
+            """# Export errores test (modelos finales)
+out = ROOT / "data" / "exports" / "test_errors_final.csv"
+combined = []
+for task, frame in results_final.items():
+    part = frame[~frame["correct"]].copy()
+    part.insert(0, "task", task)
+    combined.append(part)
+export_df = pd.concat(combined, ignore_index=True)
+export_df.to_csv(out, index=False)
+print(f"Exportado: {out} ({len(export_df)} filas)")
+export_df.head(5)
+"""
+        ),
+        md("## Check 2 — Antes/después: temas fase 1 vs fase 4"),
+        code(
+            """assert BASELINE_TEMAS.exists(), f"Baseline no encontrado: {BASELINE_TEMAS}"
+
+temas_baseline = predict_test_errors("temas", model_dir=BASELINE_TEMAS)
+temas_phase4 = results_final["temas"]
+
+for label, frame in [("Fase 1 (solo título)", temas_baseline), ("Fase 4 (sección+título)", temas_phase4)]:
+    err = (~frame["correct"]).sum()
+    print(f"{label}: {err}/{len(frame)} errores | acc={frame['correct'].mean():.3f}")
+
+# Filas donde cambió la predicción entre modelos
+merged = temas_baseline[["titulo", "seccion", "true_label", "pred_label", "confidence"]].rename(
+    columns={"pred_label": "pred_f1", "confidence": "conf_f1"}
+)
+merged = merged.merge(
+    temas_phase4[["titulo", "pred_label", "confidence", "correct"]].rename(
+        columns={"pred_label": "pred_f4", "confidence": "conf_f4", "correct": "correct_f4"}
+    ),
+    on="titulo",
+)
+merged["pred_f1_correct"] = merged["true_label"] == merged["pred_f1"]
+merged["changed_pred"] = merged["pred_f1"] != merged["pred_f4"]
+merged["fixed"] = (~merged["pred_f1_correct"]) & merged["correct_f4"]
+merged["broken"] = merged["pred_f1_correct"] & (~merged["correct_f4"])
+
+print(f"\\nPredicciones distintas: {merged['changed_pred'].sum()}")
+print(f"Corregidos (mal en f1, bien en f4): {merged['fixed'].sum()}")
+print(f"Empeorados (bien en f1, mal en f4): {merged['broken'].sum()}")
+"""
+        ),
+        code(
+            """# Ejemplos corregidos y empeorados
+cols = ["true_label", "pred_f1", "pred_f4", "seccion", "titulo"]
+
+print("=== Corregidos por fase 4 (muestra) ===")
+display(merged[merged["fixed"]][cols].head(10))
+
+print("\\n=== Empeorados por fase 4 (muestra) ===")
+display(merged[merged["broken"]][cols].head(10))
+"""
+        ),
+        code(
+            """# Pares de confusión: baseline vs fase 4
+fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+labels = sorted(temas_phase4["true_label"].unique())
+
+for ax, (title, frame) in zip(
+    axes,
+    [("Fase 1 — solo título", temas_baseline), ("Fase 4 — sección+título", temas_phase4)],
+):
+    cm = confusion_matrix(frame["true_label"], frame["pred_label"], labels=labels)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
+    disp.plot(ax=ax, cmap="Oranges", xticks_rotation=45, colorbar=False)
+    ax.set_title(title)
+
+plt.tight_layout()
+plt.show()
+
+print("Pares más frecuentes — Fase 1:")
+display(top_confusion_pairs(temas_baseline))
+print("\\nPares más frecuentes — Fase 4:")
+display(top_confusion_pairs(temas_phase4))
+"""
+        ),
+        md("## Check 5 — Regresión por clase (F1 por tema)"),
+        code(
+            """def per_class_from_metrics(model_dir: Path) -> pd.DataFrame:
+    metrics_path = model_dir / "metrics.json"
+    payload = json.loads(metrics_path.read_text(encoding="utf-8"))
+    report = payload.get("classification_report", {})
+    rows = []
+    for label, scores in report.items():
+        if label in ("accuracy", "macro avg", "weighted avg"):
+            continue
+        rows.append(
+            {
+                "label": label,
+                "f1": scores["f1-score"],
+                "precision": scores["precision"],
+                "recall": scores["recall"],
+                "support": scores["support"],
+            }
+        )
+    out = pd.DataFrame(rows)
+    test_f1 = payload.get("test_metrics", {}).get("test_f1_macro")
+    out.attrs["test_f1_macro"] = test_f1
+    out.attrs["input_text_mode"] = payload.get("input_text_mode", "titulo")
+    return out
+
+
+f1_baseline = per_class_from_metrics(BASELINE_TEMAS)
+f1_phase4 = per_class_from_metrics(FINAL_MODELS["temas"])
+
+compare = f1_baseline[["label", "f1", "support"]].merge(
+    f1_phase4[["label", "f1"]],
+    on="label",
+    suffixes=("_f1", "_f4"),
+)
+compare["delta_f1"] = compare["f1_f4"] - compare["f1_f1"]
+compare = compare.sort_values("delta_f1")
+
+print(
+    f"Test F1 macro — Fase 1: {f1_baseline.attrs.get('test_f1_macro', 0):.3f} | "
+    f"Fase 4: {f1_phase4.attrs.get('test_f1_macro', 0):.3f} | "
+    f"Δ: {compare['delta_f1'].mean():+.3f} (promedio por clase)"
+)
+compare
+"""
+        ),
+        code(
+            """fig, ax = plt.subplots(figsize=(10, 6))
+
+y_pos = range(len(compare))
+width = 0.35
+ax.barh([y - width / 2 for y in y_pos], compare["f1_f1"], height=width, label="Fase 1")
+ax.barh([y + width / 2 for y in y_pos], compare["f1_f4"], height=width, label="Fase 4")
+ax.set_yticks(list(y_pos), compare["label"])
+ax.set_xlim(0, 1)
+ax.set_xlabel("F1 (test)")
+ax.set_title("Check 5 — F1 por tema: baseline vs fase 4")
+ax.legend()
+plt.tight_layout()
+plt.show()
+
+regressed = compare[compare["delta_f1"] < 0]
+improved = compare[compare["delta_f1"] > 0]
+print(f"Clases mejoradas: {len(improved)} | regresadas: {len(regressed)} | sin cambio: {len(compare) - len(improved) - len(regressed)}")
+if not regressed.empty:
+    print("\\nRegresiones (F1 bajó):")
+    display(regressed[["label", "f1_f1", "f1_f4", "delta_f1", "support"]])
+"""
+        ),
+        code(
+            """# Verificación cruzada: F1 por clase desde predicciones (debe coincidir ~con metrics.json)
+for label, frame in [("baseline", temas_baseline), ("phase4", temas_phase4)]:
+    scores = f1_score(frame["true_label"], frame["pred_label"], average=None, labels=sorted(frame["true_label"].unique()))
+    print(f"{label} macro F1 (sklearn): {f1_score(frame['true_label'], frame['pred_label'], average='macro'):.3f}")
+"""
+        ),
+    ],
+)
+
 print("Done.")

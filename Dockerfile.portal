@@ -1,0 +1,20 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt requirements-portal.txt ./
+RUN pip install --no-cache-dir -r requirements-portal.txt \
+    && playwright install chromium --with-deps
+
+COPY mindful_news/ mindful_news/
+COPY portal/ portal/
+COPY config.yml .
+COPY scripts/run_poller.py scripts/run_poller.py
+COPY scripts/run_portal.py scripts/run_portal.py
+
+ENV API_BASE_URL=http://api:8000
+ENV DB_HOST=mysql
+
+EXPOSE 8501
+
+CMD ["python", "scripts/run_portal.py"]

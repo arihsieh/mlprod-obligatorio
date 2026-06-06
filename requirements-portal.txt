@@ -1,0 +1,5 @@
+-r requirements.txt
+streamlit>=1.32.0
+requests>=2.32.0
+pandas>=2.2.0
+apscheduler>=3.10.0

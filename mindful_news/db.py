@@ -120,7 +120,7 @@ def save_headlines(headlines: list[Headline], source_run: str) -> int:
 
 def fetch_unclassified(limit: int | None = None) -> list[dict]:
     query = (
-        "SELECT id, titulo, url, medio FROM headlines "
+        "SELECT id, titulo, url, medio, seccion FROM headlines "
         "WHERE classified_at IS NULL "
         "ORDER BY COALESCE(fecha, scraped_at) DESC, id ASC"
     )
@@ -177,6 +177,36 @@ def update_metadata(rows: list[dict]) -> int:
         except pymysql.Error:
             conn.rollback()
             raise
+
+
+def fetch_headlines(
+    temas: list[str] | None = None,
+    cargas: list[str] | None = None,
+    limit: int = 200,
+) -> list[dict]:
+    clauses = ["classified_at IS NOT NULL"]
+    params: list[object] = []
+    if temas:
+        placeholders = ", ".join(["%s"] * len(temas))
+        clauses.append(f"tema IN ({placeholders})")
+        params.extend(temas)
+    if cargas:
+        placeholders = ", ".join(["%s"] * len(cargas))
+        clauses.append(f"carga IN ({placeholders})")
+        params.extend(cargas)
+    where = " AND ".join(clauses)
+    query = f"""
+        SELECT id, titulo, url, thumbnail_url, medio, seccion, fecha, tema, carga, scraped_at
+        FROM headlines
+        WHERE {where}
+        ORDER BY COALESCE(fecha, scraped_at) DESC, id DESC
+        LIMIT %s
+    """
+    params.append(limit)
+    with connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(query, params)
+            return list(cursor.fetchall())
 
 
 def stats() -> dict:
