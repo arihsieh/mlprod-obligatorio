@@ -1,0 +1,30 @@
+bulk_target_per_source: 3000
+hourly_limit_per_source: 50
+log_level: 20
+request_delay_min: 1.0
+request_delay_max: 3.0
+
+database:
+  host: "127.0.0.1"
+  port: 3306
+  user: "mindful"
+  password: "mindful"
+  name: "mindful_news"
+
+classification_model: "gpt-5.4-mini"
+prompt_model: "gpt-5.5"
+classification_batch_size: 25
+
+sources:
+  montevideo_portal:
+    name: "Montevideo Portal"
+    listing_url: "https://www.montevideo.com.uy/categoria/Noticias-310"
+  el_pais:
+    name: "El País"
+    listing_url: "https://www.elpais.com.uy/ultimas-noticias"
+  la_diaria:
+    name: "La Diaria"
+    listing_url: "https://ladiaria.com.uy/"
+  el_observador:
+    name: "El Observador"
+    listing_url: "https://www.elobservador.com.uy/?nogeoredirect"
