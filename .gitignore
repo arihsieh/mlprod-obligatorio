@@ -3,6 +3,5 @@ __pycache__/
 *.py[cod]
 .env
 data/logs/
-data/exports/
 *.db
 .DS_Store
