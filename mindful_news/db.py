@@ -5,6 +5,7 @@ import pymysql
 from pymysql.connections import Connection
 
 from mindful_news.config import load_config
+from mindful_news.dedup import stable_external_id
 from mindful_news.models import Headline
 
 CREATE_HEADLINES_TABLE = """
@@ -46,6 +47,7 @@ INSERT INTO headlines (
     %(medio)s, %(seccion)s, %(fecha)s, %(source_run)s
 )
 ON DUPLICATE KEY UPDATE
+    url = VALUES(url),
     titulo = VALUES(titulo),
     thumbnail_url = COALESCE(VALUES(thumbnail_url), thumbnail_url),
     seccion = COALESCE(VALUES(seccion), seccion),
@@ -86,17 +88,58 @@ def init_db() -> None:
                 try:
                     cursor.execute(statement)
                 except pymysql.Error as exc:
-                    if exc.args[0] not in (1060, 1061):
+                    if exc.args[0] not in (1060, 1061, 1062):
                         raise
+        conn.commit()
+    merge_duplicate_external_ids()
+    with connection() as conn:
+        with conn.cursor() as cursor:
+            try:
+                cursor.execute(
+                    "CREATE UNIQUE INDEX uq_headlines_medio_external "
+                    "ON headlines (medio, external_id(191))"
+                )
+            except pymysql.Error as exc:
+                if exc.args[0] != 1061:
+                    raise
         conn.commit()
 
 
+def merge_duplicate_external_ids() -> int:
+    """Drop duplicate rows that share medio + numeric external_id (keep newest)."""
+    with connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT medio, external_id,
+                       GROUP_CONCAT(id ORDER BY scraped_at DESC, id DESC) AS ids
+                FROM headlines
+                WHERE external_id REGEXP '^[0-9]+$'
+                GROUP BY medio, external_id
+                HAVING COUNT(*) > 1
+                """
+            )
+            groups = list(cursor.fetchall())
+            removed = 0
+            for group in groups:
+                ids = [int(value) for value in group["ids"].split(",")]
+                drop_ids = ids[1:]
+                if not drop_ids:
+                    continue
+                placeholders = ", ".join(["%s"] * len(drop_ids))
+                cursor.execute(f"DELETE FROM headlines WHERE id IN ({placeholders})", drop_ids)
+                removed += len(drop_ids)
+        conn.commit()
+    return removed
+
+
 def save_headlines(headlines: list[Headline], source_run: str) -> int:
+    """Insert headlines; dedupe by URL and (medio, external_id). Returns new row count."""
     if not headlines:
         return 0
     rows = [
         {
-            "external_id": h.external_id or h.url,
+            "external_id": stable_external_id(h)[:512],
             "titulo": h.titulo,
             "url": h.url,
             "thumbnail_url": h.thumbnail_url,
@@ -107,12 +150,16 @@ def save_headlines(headlines: list[Headline], source_run: str) -> int:
         }
         for h in headlines
     ]
+    inserted = 0
     with connection() as conn:
         try:
             with conn.cursor() as cursor:
-                cursor.executemany(INSERT_HEADLINE, rows)
+                for row in rows:
+                    cursor.execute(INSERT_HEADLINE, row)
+                    if cursor.rowcount == 1:
+                        inserted += 1
             conn.commit()
-            return len(rows)
+            return inserted
         except pymysql.Error:
             conn.rollback()
             raise
@@ -179,13 +226,16 @@ def update_metadata(rows: list[dict]) -> int:
             raise
 
 
-def fetch_headlines(
+def _headline_filter_clauses(
     temas: list[str] | None = None,
     cargas: list[str] | None = None,
-    limit: int = 200,
-) -> list[dict]:
-    clauses = ["classified_at IS NOT NULL"]
-    params: list[object] = []
+    medios: list[str] | None = None,
+) -> tuple[list[str], list[object]]:
+    clauses = [
+        "classified_at IS NOT NULL",
+        "url NOT LIKE %s",
+    ]
+    params: list[object] = ["%test.mindful-news.local%"]
     if temas:
         placeholders = ", ".join(["%s"] * len(temas))
         clauses.append(f"tema IN ({placeholders})")
@@ -194,15 +244,44 @@ def fetch_headlines(
         placeholders = ", ".join(["%s"] * len(cargas))
         clauses.append(f"carga IN ({placeholders})")
         params.extend(cargas)
+    if medios:
+        placeholders = ", ".join(["%s"] * len(medios))
+        clauses.append(f"medio IN ({placeholders})")
+        params.extend(medios)
+    return clauses, params
+
+
+def count_headlines(
+    temas: list[str] | None = None,
+    cargas: list[str] | None = None,
+    medios: list[str] | None = None,
+) -> int:
+    clauses, params = _headline_filter_clauses(temas, cargas, medios)
+    where = " AND ".join(clauses)
+    query = f"SELECT COUNT(*) AS total FROM headlines WHERE {where}"
+    with connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(query, params)
+            return int(cursor.fetchone()["total"])
+
+
+def fetch_headlines(
+    temas: list[str] | None = None,
+    cargas: list[str] | None = None,
+    medios: list[str] | None = None,
+    limit: int = 200,
+    offset: int = 0,
+) -> list[dict]:
+    clauses, params = _headline_filter_clauses(temas, cargas, medios)
     where = " AND ".join(clauses)
     query = f"""
         SELECT id, titulo, url, thumbnail_url, medio, seccion, fecha, tema, carga, scraped_at
         FROM headlines
         WHERE {where}
         ORDER BY COALESCE(fecha, scraped_at) DESC, id DESC
-        LIMIT %s
+        LIMIT %s OFFSET %s
     """
-    params.append(limit)
+    params.extend([limit, offset])
     with connection() as conn:
         with conn.cursor() as cursor:
             cursor.execute(query, params)

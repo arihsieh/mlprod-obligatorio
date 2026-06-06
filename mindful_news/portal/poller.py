@@ -16,8 +16,9 @@ def scrape_latest(logger: logging.Logger, limit: int | None = None) -> int:
     total = 0
     for key in ALL_SOURCES:
         headlines = LATEST_SCRAPERS[key](logger, per_source)
-        total += save_headlines(headlines, source_run="hourly")
-        logger.info("%s: %d headlines", key, len(headlines))
+        new = save_headlines(headlines, source_run="hourly")
+        total += new
+        logger.info("%s: %d fetched, %d new", key, len(headlines), new)
     return total
 
 

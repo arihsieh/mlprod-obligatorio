@@ -6,6 +6,7 @@ from playwright.sync_api import Page
 
 from mindful_news.browser import with_page
 from mindful_news.config import load_config
+from mindful_news.dedup import dedupe_headlines
 from mindful_news.http import delay, fetch_eo_article, normalize_url, session
 from mindful_news.models import Headline
 
@@ -62,7 +63,7 @@ def _to_headlines(raw: list[dict]) -> list[Headline]:
 
 def _backfill(existing: list[Headline], target: int, logger: Logger) -> list[Headline]:
     cfg = load_config()
-    by_url = {h.url: h for h in existing}
+    by_id = {h.external_id: h for h in existing if h.external_id}
     ids = [int(h.external_id) for h in existing if str(h.external_id).isdigit()]
     current_id = max(ids) if ids else 6_046_400
     checked = misses = 0
@@ -82,7 +83,7 @@ def _backfill(existing: list[Headline], target: int, logger: Logger) -> list[Hea
         )
 
     with ThreadPoolExecutor(max_workers=8) as pool:
-        while len(by_url) < target and misses < 1000:
+        while len(by_id) < target and misses < 1000:
             batch_ids = list(range(current_id - 39, current_id + 1))
             current_id -= 40
             checked += len(batch_ids)
@@ -92,11 +93,11 @@ def _backfill(existing: list[Headline], target: int, logger: Logger) -> list[Hea
                 headline = future.result()
                 if headline:
                     found += 1
-                    by_url[headline.url] = headline
+                    by_id[headline.external_id] = headline
             misses = misses + 1 if found == 0 else 0
-            if checked % 200 == 0 or len(by_url) >= target:
-                logger.info("EO backfill checked=%d collected=%d", checked, len(by_url))
-    return list(by_url.values())
+            if checked % 200 == 0 or len(by_id) >= target:
+                logger.info("EO backfill checked=%d collected=%d", checked, len(by_id))
+    return list(by_id.values())
 
 
 def scrape_bulk(logger: Logger, target: int) -> list[Headline]:
@@ -113,7 +114,7 @@ def scrape_bulk(logger: Logger, target: int) -> list[Headline]:
         items.extend(_to_headlines(page.evaluate(LISTING_JS)))
         return items
 
-    headlines = list({h.url: h for h in with_page(run)}.values())
+    headlines = dedupe_headlines(with_page(run))
     logger.info("EO listing seed: %d headlines", len(headlines))
     headlines = _backfill(headlines, target, logger)
     headlines.sort(key=lambda h: int(h.external_id) if str(h.external_id).isdigit() else 0, reverse=True)

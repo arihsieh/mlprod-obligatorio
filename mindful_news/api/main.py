@@ -19,7 +19,8 @@ from mindful_news.api.schemas import (
     PredictRequest,
     PredictResponse,
 )
-from mindful_news.db import fetch_headlines, init_db
+from mindful_news.db import count_headlines, fetch_headlines, init_db
+from mindful_news.seed import seed_from_splits_if_needed
 from mindful_news.inference import NewsClassifier
 
 _classifier: NewsClassifier | None = None
@@ -57,6 +58,7 @@ async def lifespan(_app: FastAPI):
     global _classifier
     try:
         init_db()
+        seed_from_splits_if_needed()
     except Exception:  # noqa: BLE001 — DB may not be available in all envs
         pass
     _classifier = NewsClassifier()
@@ -174,7 +176,21 @@ def portal() -> HTMLResponse:
 def get_headlines(
     t: list[str] = Query(default=[]),
     c: list[str] = Query(default=[]),
-    limit: int = Query(default=60, ge=1, le=200),
-) -> list[dict]:
-    rows = fetch_headlines(temas=t or None, cargas=c or None, limit=limit)
-    return jsonable_encoder(rows)
+    m: list[str] = Query(default=[]),
+    limit: int = Query(default=30, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> dict[str, Any]:
+    temas  = t or None
+    cargas = c or None
+    medios = m or None
+    total = count_headlines(temas=temas, cargas=cargas, medios=medios)
+    rows  = fetch_headlines(temas=temas, cargas=cargas, medios=medios, limit=limit, offset=offset)
+    return jsonable_encoder(
+        {
+            "items": rows,
+            "total": total,
+            "offset": offset,
+            "limit": limit,
+            "has_more": offset + len(rows) < total,
+        }
+    )

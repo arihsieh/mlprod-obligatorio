@@ -219,6 +219,47 @@
   .ci--media.on { background: #d97706; }
   .ci--alta.on  { background: var(--red); }
 
+  /* Medio toggle (desktop) — identical shape to carga-toggle */
+  .medio-wrap { position: relative; flex-shrink: 0; }
+  .medio-toggle {
+    display: inline-flex; align-items: center; gap: .32rem;
+    font-size: .75rem; font-weight: 500; color: var(--text2);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: .3rem .7rem;
+    transition: all .14s; white-space: nowrap;
+  }
+  .medio-toggle:hover { box-shadow: var(--sh-sm); }
+  .medio-toggle.open  { border-color: var(--teal); color: var(--teal-d); background: var(--teal-bg); }
+  .medio-toggle.filtered { border-color: var(--teal); }
+  .medio-toggle svg   { width: 12px; height: 12px; }
+  .mt-chevron { transition: transform .2s; }
+  .medio-toggle.open .mt-chevron { transform: rotate(180deg); }
+
+  /* Medio popover */
+  .medio-popover {
+    position: absolute; right: 0; top: calc(100% + 8px);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r-lg); box-shadow: var(--sh-lg);
+    min-width: 210px; overflow: hidden; z-index: 60;
+    animation: popIn .16s ease;
+  }
+  .medio-popover.hidden { display: none; }
+  .mp-item {
+    display: flex; align-items: center; gap: .55rem;
+    padding: .65rem 1rem; cursor: pointer; transition: background .12s; user-select: none;
+  }
+  .mp-item:not(:last-child) { border-bottom: 1px solid var(--border-l); }
+  .mp-item:hover { background: var(--border-l); }
+  .mp-item.active { background: var(--teal-bg); }
+  .mp-item:not(.active) { opacity: .55; }
+  .mp-item:not(.active) .mp-name { color: var(--text3); }
+  .mp-icon { width: 14px; height: 14px; flex-shrink: 0; transition: opacity .15s; }
+  .mp-item:not(.active) .mp-icon { opacity: .35; }
+  .mp-name { flex: 1; font-size: .82rem; font-weight: 500; transition: color .15s; }
+  .mp-item.active .mp-name { font-weight: 600; color: var(--text); }
+  .mp-tick { width: 14px; height: 14px; color: var(--teal); opacity: 0; transition: opacity .15s; flex-shrink: 0; }
+  .mp-item.active .mp-tick { opacity: 1; }
+
   /* Carga popover */
   .carga-popover {
     position: absolute; right: 0; top: calc(100% + 8px);
@@ -314,9 +355,33 @@
     font-weight: 600;
   }
 
+  /* Medio pills in drawer */
+  .fd-medios { display: flex; flex-wrap: wrap; gap: .35rem; }
+  .fd-medio-btn {
+    display: inline-flex; align-items: center; gap: .3rem;
+    font-size: .8rem; font-weight: 500;
+    padding: .4rem .8rem; border-radius: 999px;
+    border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--text2);
+    transition: all .15s;
+  }
+  .fd-medio-btn svg { width: 12px; height: 12px; transition: opacity .15s; }
+  .fd-medio-btn:hover { box-shadow: var(--sh-sm); }
+  .fd-medio-btn:active { transform: scale(.93); }
+  .fd-medio-btn:not(.active) {
+    color: var(--text3);
+    border-color: var(--border);
+    background: var(--border-l);
+    opacity: .7;
+  }
+  .fd-medio-btn:not(.active) svg { opacity: .35; }
+  .fd-medio-btn.active {
+    font-weight: 600;
+    opacity: 1;
+  }
+
   /* Carga cards in drawer */
-  .fd-cargas { display: flex; flex-direction: column; gap: .45rem; }
-  .fd-carga-item {
+  .fd-cargas { display: flex; flex-direction: column; gap: .45rem; }  .fd-carga-item {
     display: flex; align-items: center; gap: .75rem;
     padding: .82rem 1rem; border-radius: var(--r);
     border: 1.5px solid var(--border);
@@ -384,6 +449,23 @@
     transition: opacity .2s ease;
   }
   .feed.fading { opacity: .4; }
+
+  .load-more-wrap {
+    max-width: 1200px; margin: 0 auto;
+    padding: .5rem 1.25rem 2rem;
+    display: flex; justify-content: center;
+  }
+  .load-more-wrap.hidden { display: none; }
+  .load-more-btn {
+    display: inline-flex; align-items: center; gap: .35rem;
+    font-size: .82rem; font-weight: 600; color: var(--text2);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: .55rem 1.1rem;
+    transition: all .15s;
+  }
+  .load-more-btn:hover { color: var(--teal-d); border-color: var(--teal); background: var(--teal-bg); }
+  .load-more-btn:disabled { opacity: .55; cursor: wait; }
+  .load-more-btn svg { width: 14px; height: 14px; }
 
   /* ── News item (horizontal) ──────────────────────────────────────────── */
   .item {
@@ -511,12 +593,14 @@
   .gm-cta:hover { background:var(--teal-d); }
 
   /* ── Mobile ──────────────────────────────────────────────────────────── */
-  @media (max-width: 640px) {
+  @media (max-width: 1024px) {
     .brand-text p { display:none; }
     .filterbar { display: none; }            /* hidden — use drawer instead */
     .filter-btn { display: inline-flex; }    /* show filter button in header */
     .results-bar, .feed-wrap, .site-header { padding-left:.9rem; padding-right:.9rem; }
     .feed { grid-template-columns:1fr; gap:.45rem; }
+  }
+  @media (max-width: 640px) {
     .ob-grid { grid-template-columns:repeat(3,1fr); gap:.45rem; }
     .ob-art { height:58px; }
   }
@@ -626,6 +710,14 @@
           </div>
         </div>
       </div>
+      <div class="medio-wrap">
+        <button class="medio-toggle" id="medioToggle" onclick="toggleMedioPopover()">
+          <i data-lucide="radio"></i>
+          Fuente
+          <i data-lucide="chevron-down" class="mt-chevron"></i>
+        </button>
+        <div class="medio-popover hidden" id="medioPopover"></div>
+      </div>
     </div>
   </div>
 
@@ -638,6 +730,12 @@
 
   <div class="feed-wrap">
     <div id="feed" class="feed"></div>
+  </div>
+  <div class="load-more-wrap hidden" id="loadMoreWrap">
+    <button class="load-more-btn" id="loadMoreBtn" onclick="loadMoreHeadlines()">
+      <i data-lucide="chevron-down"></i>
+      Cargar más
+    </button>
   </div>
 
   <footer>Mindful News &nbsp;·&nbsp; ML con mmBERT-small &nbsp;·&nbsp; Uruguay</footer>
@@ -654,6 +752,10 @@
     </div>
   </div>
   <div class="fd-body">
+    <div>
+      <p class="fd-section-title">Fuente</p>
+      <div class="fd-medios" id="fdMedios"></div>
+    </div>
     <div>
       <p class="fd-section-title">Temas</p>
       <div class="fd-topics" id="fdTopics"></div>
@@ -749,16 +851,28 @@ const CARGAS = {
   alta:  { label:'Intensa'  },
 };
 
+const MEDIOS = {
+  'El País':          { icon:'newspaper',   color:'#0369a1' },
+  'El Observador':    { icon:'eye',          color:'#0f766e' },
+  'La Diaria':        { icon:'feather',      color:'#7c3aed' },
+  'Montevideo Portal':{ icon:'map-pin',      color:'#b45309' },
+};
+
 const DEFAULT_TOPICS = ['deportes','cultura','tecnologia','salud','medioambiente'];
 const DEFAULT_CARGAS  = ['baja','media'];
-const LIMIT = 60;
+const PAGE_SIZE = 30;
 
 /* ── State ──────────────────────────────────────────────────────────────── */
 let selTopics  = new Set(DEFAULT_TOPICS);
 let selCargas  = new Set(DEFAULT_CARGAS);
+let selMedios  = new Set(Object.keys(MEDIOS));
 let debTimer   = null;
-let popOpen    = false;
-let drawerOpen = false;
+let popOpen      = false;
+let medioPopOpen = false;
+let drawerOpen   = false;
+let listOffset = 0;
+let hasMore    = false;
+let loadingMore = false;
 
 /* ── Onboarding ─────────────────────────────────────────────────────────── */
 let obSel = new Set();
@@ -811,14 +925,17 @@ function showApp() {
 /* ── URL persistence ────────────────────────────────────────────────────── */
 function loadFromURL() {
   const p = new URLSearchParams(window.location.search);
-  const t = p.get('t'), c = p.get('c');
+  const t = p.get('t'), c = p.get('c'), m = p.get('m');
   if (t) selTopics = new Set(t.split(',').filter(k => TOPICS[k]));
   if (c) selCargas  = new Set(c.split(',').filter(k => CARGAS[k]));
+  if (m) selMedios  = new Set(m.split(',').filter(k => MEDIOS[k]));
 }
 function saveToURL() {
   const p = new URLSearchParams();
   if (selTopics.size) p.set('t', [...selTopics].join(','));
   if (selCargas.size)  p.set('c', [...selCargas].join(','));
+  const allMedios = Object.keys(MEDIOS);
+  if (selMedios.size < allMedios.length) p.set('m', [...selMedios].join(','));
   history.replaceState(null, '', '?' + p.toString());
 }
 
@@ -863,7 +980,18 @@ function renderFilters() {
   }).join('');
   lucide.createIcons({ nodes: fdTopics.querySelectorAll('[data-lucide]') });
 
+  // Drawer medios
+  const fdMedios = document.getElementById('fdMedios');
+  fdMedios.innerHTML = Object.entries(MEDIOS).map(([k, m]) =>
+    `<button class="fd-medio-btn${selMedios.has(k) ? ' active' : ''}" data-medio="${attr(k)}"
+       onclick="toggleMedio('${attr(k)}')">
+       <i data-lucide="${m.icon}"></i>${html(k)}
+     </button>`
+  ).join('');
+  lucide.createIcons({ nodes: fdMedios.querySelectorAll('[data-lucide]') });
+
   updateCargaUI();
+  updateMedioUI();
 }
 
 function updateCargaUI() {
@@ -881,6 +1009,41 @@ function updateCargaUI() {
     const c = el.dataset.carga;
     const on = selCargas.has(c);
     el.classList.toggle(`active--${c}`, on);
+  });
+}
+
+function updateMedioUI() {
+  // Desktop popover — rebuild items
+  const pop = document.getElementById('medioPopover');
+  if (pop) {
+    pop.innerHTML = Object.entries(MEDIOS).map(([k, m]) => {
+      const on = selMedios.has(k);
+      return `<div class="mp-item${on ? ' active' : ''}" data-medio="${attr(k)}" onclick="toggleMedio('${attr(k)}')">
+        <i data-lucide="${m.icon}" class="mp-icon" style="color:${m.color}"></i>
+        <span class="mp-name">${html(k)}</span>
+        <i data-lucide="check" class="mp-tick"></i>
+      </div>`;
+    }).join('');
+    lucide.createIcons({ nodes: pop.querySelectorAll('[data-lucide]') });
+  }
+  const toggle = document.getElementById('medioToggle');
+  if (toggle) toggle.classList.toggle('filtered', selMedios.size < Object.keys(MEDIOS).length);
+
+  // Drawer pills — sync class + per-medio colors
+  document.querySelectorAll('.fd-medio-btn').forEach(btn => {
+    const k = btn.dataset.medio;
+    const m = MEDIOS[k];
+    const on = selMedios.has(k);
+    btn.classList.toggle('active', on);
+    if (on && m) {
+      btn.style.color = m.color;
+      btn.style.borderColor = m.color + '55';
+      btn.style.background = m.color + '18';
+    } else {
+      btn.style.color = '';
+      btn.style.borderColor = '';
+      btn.style.background = '';
+    }
   });
 }
 
@@ -926,6 +1089,13 @@ function toggleCarga(k) {
   saveToURL(); debounce();
 }
 
+function toggleMedio(k) {
+  if (selMedios.has(k)) selMedios.delete(k);
+  else selMedios.add(k);
+  updateMedioUI();
+  saveToURL(); debounce();
+}
+
 /* ── Filter drawer ──────────────────────────────────────────────────────── */
 function openFilterDrawer() {
   drawerOpen = true;
@@ -942,6 +1112,7 @@ function closeFilterDrawer() {
 function resetFilters() {
   selTopics = new Set(DEFAULT_TOPICS);
   selCargas  = new Set(DEFAULT_CARGAS);
+  selMedios  = new Set(Object.keys(MEDIOS));
   localStorage.setItem('mn_topics', [...selTopics].join(','));
   renderFilters();
   saveToURL(); debounce();
@@ -949,15 +1120,27 @@ function resetFilters() {
 
 /* ── Carga popover (desktop) ────────────────────────────────────────────── */
 function toggleCargaPopover() {
+  if (medioPopOpen) { medioPopOpen = false; document.getElementById('medioPopover').classList.add('hidden'); document.getElementById('medioToggle').classList.remove('open'); }
   popOpen = !popOpen;
   document.getElementById('cargaPopover').classList.toggle('hidden', !popOpen);
   document.getElementById('cargaToggle').classList.toggle('open', popOpen);
+}
+function toggleMedioPopover() {
+  if (popOpen) { popOpen = false; document.getElementById('cargaPopover').classList.add('hidden'); document.getElementById('cargaToggle').classList.remove('open'); }
+  medioPopOpen = !medioPopOpen;
+  document.getElementById('medioPopover').classList.toggle('hidden', !medioPopOpen);
+  document.getElementById('medioToggle').classList.toggle('open', medioPopOpen);
 }
 document.addEventListener('click', e => {
   if (popOpen && !e.target.closest('.carga-wrap')) {
     popOpen = false;
     document.getElementById('cargaPopover').classList.add('hidden');
     document.getElementById('cargaToggle').classList.remove('open');
+  }
+  if (medioPopOpen && !e.target.closest('.medio-wrap')) {
+    medioPopOpen = false;
+    document.getElementById('medioPopover').classList.add('hidden');
+    document.getElementById('medioToggle').classList.remove('open');
   }
 });
 
@@ -986,27 +1169,86 @@ function showSkeleton() {
 }
 
 /* ── Load headlines ─────────────────────────────────────────────────────── */
+function buildHeadlinesParams(offset = 0) {
+  const p = new URLSearchParams();
+  [...selTopics].forEach(t => p.append('t', t));
+  [...selCargas].forEach(c => p.append('c', c));
+  const allMedios = Object.keys(MEDIOS);
+  if (selMedios.size < allMedios.length)
+    [...selMedios].forEach(m => p.append('m', m));
+  p.set('limit', PAGE_SIZE);
+  p.set('offset', offset);
+  return p;
+}
+
+function normalizeHeadlinesResponse(data) {
+  if (Array.isArray(data)) {
+    return { items: data, total: data.length, offset: 0, limit: data.length, has_more: false };
+  }
+  return data;
+}
+
+function updateLoadMoreButton() {
+  const wrap = document.getElementById('loadMoreWrap');
+  const btn  = document.getElementById('loadMoreBtn');
+  if (!hasMore) {
+    wrap.classList.add('hidden');
+    return;
+  }
+  wrap.classList.remove('hidden');
+  btn.disabled = loadingMore;
+  btn.innerHTML = loadingMore
+    ? 'Cargando…'
+    : '<i data-lucide="chevron-down"></i> Cargar más';
+  lucide.createIcons({ nodes: btn.querySelectorAll('[data-lucide]') });
+}
+
 async function loadHeadlines() {
   if (!selTopics.size || !selCargas.size) {
     showEmpty('Seleccioná al menos un tema y una carga.', 'filter');
     document.getElementById('resultsCount').innerHTML = '&nbsp;';
+    document.getElementById('loadMoreWrap').classList.add('hidden');
     return;
   }
+  listOffset = 0;
   const feed = document.getElementById('feed');
   feed.classList.add('fading');
   showSkeleton();
-  const p = new URLSearchParams();
-  [...selTopics].forEach(t => p.append('t', t));
-  [...selCargas].forEach(c => p.append('c', c));
-  p.set('limit', LIMIT);
   try {
-    const res = await fetch('/api/headlines?' + p);
+    const res = await fetch('/api/headlines?' + buildHeadlinesParams(0));
     if (!res.ok) throw new Error();
-    renderItems(await res.json());
+    const data = normalizeHeadlinesResponse(await res.json());
+    hasMore = !!data.has_more;
+    listOffset = (data.items || []).length;
+    renderItems(data.items || [], { replace: true, startIndex: 0 });
+    updateLoadMoreButton();
   } catch {
     showEmpty('No se pudo conectar con el servidor.', 'wifi-off');
+    document.getElementById('loadMoreWrap').classList.add('hidden');
   } finally {
     feed.classList.remove('fading');
+  }
+}
+
+async function loadMoreHeadlines() {
+  if (!hasMore || loadingMore) return;
+  loadingMore = true;
+  updateLoadMoreButton();
+  try {
+    const res = await fetch('/api/headlines?' + buildHeadlinesParams(listOffset));
+    if (!res.ok) throw new Error();
+    const data = normalizeHeadlinesResponse(await res.json());
+    hasMore = !!data.has_more;
+    const items = data.items || [];
+    renderItems(items, { replace: false, startIndex: listOffset });
+    listOffset += items.length;
+    updateLoadMoreButton();
+  } catch {
+    hasMore = false;
+    updateLoadMoreButton();
+  } finally {
+    loadingMore = false;
+    updateLoadMoreButton();
   }
 }
 
@@ -1018,22 +1260,22 @@ function manualRefresh() {
 }
 
 /* ── Render items ───────────────────────────────────────────────────────── */
-function renderItems(rows) {
+function renderItems(rows, { replace = true, startIndex = 0 } = {}) {
   const feed = document.getElementById('feed');
-  if (!rows.length) {
+  if (!rows.length && replace) {
     showEmpty('No hay noticias con esos filtros.', 'search');
     document.getElementById('resultsCount').innerHTML = '&nbsp;';
+    document.getElementById('loadMoreWrap').classList.add('hidden');
     return;
   }
-  document.getElementById('resultsCount').innerHTML =
-    `<strong>${rows.length}</strong> titular${rows.length !== 1 ? 'es' : ''}`;
+  if (!rows.length) return;
 
-  feed.innerHTML = rows.map((row, i) => {
+  const htmlItems = rows.map((row, i) => {
     const tm = TOPICS[row.tema]  || { label:row.tema,  icon:'newspaper', bg:'linear-gradient(135deg,#f1f5f9,#e2e8f0)', ic:'#64748b' };
     const cm = CARGAS[row.carga] || { label:row.carga };
     const dt = row.fecha || row.scraped_at;
     const ds = dt ? new Date(dt).toLocaleDateString('es-UY',{day:'numeric',month:'short'}) : '';
-    const delay = Math.min(i * 35, 700);
+    const delay = Math.min((startIndex + i) * 35, 700);
 
     const imgSection = row.thumbnail_url
       ? `<div class="item-img">
@@ -1071,6 +1313,9 @@ function renderItems(rows) {
       </a>`;
   }).join('');
 
+  if (replace) feed.innerHTML = htmlItems;
+  else feed.insertAdjacentHTML('beforeend', htmlItems);
+
   lucide.createIcons({ nodes: feed.querySelectorAll('[data-lucide]') });
 }
 
@@ -1092,6 +1337,7 @@ function handleOverlayClick(e) { if (e.target === e.currentTarget) closeGuide();
 /* ── Utils ──────────────────────────────────────────────────────────────── */
 function html(s) { const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
 function attr(s) { return String(s).replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function escHtml(s) { return html(s); }
 
 /* ── Boot ───────────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', boot);

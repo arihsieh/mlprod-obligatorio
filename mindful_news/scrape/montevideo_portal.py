@@ -7,6 +7,7 @@ from playwright.sync_api import Page
 from mindful_news.browser import scroll_until, with_page
 from mindful_news.config import load_config
 from mindful_news.dates import parse_mvd_date
+from mindful_news.dedup import dedupe_headlines
 from mindful_news.http import delay, fetch_mvd_article, normalize_url, session
 from mindful_news.models import Headline
 
@@ -76,7 +77,7 @@ def _to_headlines(raw: list[dict]) -> list[Headline]:
 
 def _backfill(existing: list[Headline], target: int, logger: Logger) -> list[Headline]:
     cfg = load_config()
-    by_url = {h.url: h for h in existing}
+    by_id = {h.external_id: h for h in existing if h.external_id}
     ids = [int(h.external_id) for h in existing if h.external_id and h.external_id.isdigit()]
     current_id = max(ids) if ids else 964000
     checked = misses = 0
@@ -96,7 +97,7 @@ def _backfill(existing: list[Headline], target: int, logger: Logger) -> list[Hea
         )
 
     with ThreadPoolExecutor(max_workers=8) as pool:
-        while len(by_url) < target and misses < 800:
+        while len(by_id) < target and misses < 800:
             batch_ids = list(range(current_id - 39, current_id + 1))
             current_id -= 40
             checked += len(batch_ids)
@@ -106,11 +107,11 @@ def _backfill(existing: list[Headline], target: int, logger: Logger) -> list[Hea
                 headline = future.result()
                 if headline:
                     found += 1
-                    by_url[headline.url] = headline
+                    by_id[headline.external_id] = headline
             misses = misses + 1 if found == 0 else 0
-            if checked % 200 == 0 or len(by_url) >= target:
-                logger.info("MVD backfill checked=%d collected=%d", checked, len(by_url))
-    return list(by_url.values())
+            if checked % 200 == 0 or len(by_id) >= target:
+                logger.info("MVD backfill checked=%d collected=%d", checked, len(by_id))
+    return list(by_id.values())
 
 
 def scrape_bulk(logger: Logger, target: int) -> list[Headline]:
@@ -120,7 +121,7 @@ def scrape_bulk(logger: Logger, target: int) -> list[Headline]:
         scroll_until(page, COUNT_JS, target=target)
         return _to_headlines(page.evaluate(EXTRACT_JS))
 
-    headlines = with_page(run)
+    headlines = dedupe_headlines(with_page(run))
     logger.info("MVD listing: %d headlines", len(headlines))
     if len(headlines) < target:
         headlines = _backfill(headlines, target, logger)
@@ -137,7 +138,7 @@ def scrape_latest(logger: Logger, limit: int) -> list[Headline]:
             time.sleep(0.6)
         return _to_headlines(page.evaluate(EXTRACT_JS))
 
-    headlines = with_page(run)
+    headlines = dedupe_headlines(with_page(run))
     headlines.sort(key=lambda h: int(h.external_id or "0"), reverse=True)
     logger.info("MVD latest: %d", min(len(headlines), limit))
     return headlines[:limit]
