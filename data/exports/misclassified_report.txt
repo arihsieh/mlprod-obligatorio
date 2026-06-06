@@ -1,0 +1,149 @@
+﻿python : C:\Users\arihs\anaconda3\lib\site-packages\pandas\core\arrays\masked.py:61: UserWarning: Pandas requires versi
+on '1.3.6' or newer of 'bottleneck' (version '1.3.5' currently installed).
+位於 C:\Users\arihs\AppData\Local\Temp\ps-script-5708f224-8c7c-4803-ad1f-f5dbf51cc2f6.ps1:88 字元:77
++ ... NG="utf-8"; python scripts/show_misclassified.py --limit 12 --pairs 1 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\Users\arihs\...tly installed).:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  from pandas.core import (
+C:\Users\arihs\anaconda3\lib\site-packages\torchvision\io\image.py:13: UserWarning: Failed to load image Python extensi
+on: 'Could not load this library: C:\Users\arihs\anaconda3\Lib\site-packages\torchvision\image.pyd'If you don't plan on
+ using image functionality from `torchvision.io`, you can ignore this warning. Otherwise, there might be something wron
+g with your environment. Did you have `libjpeg` or `libpng` installed before building `torchvision` from source?
+  warn(
+
+Loading weights:   0%|          | 0/138 [00:00<?, ?it/s]
+Loading weights: 100%|??????????| 138/138 [00:00<00:00, 9197.45it/s]
+
+=== TEMAS ===
+Test rows: 1801 | Errors: 444 (24.7%)
+Model: C:\Users\arihs\Code\mlprod-obligatorio\models\temas
+
+Confusion pairs (true -> pred):
+  politica       -> sociedad        (30)
+  politica       -> economia        (29)
+  economia       -> sociedad        (28)
+  politica       -> seguridad       (27)
+  sociedad       -> economia        (21)
+  internacional  -> economia        (16)
+  economia       -> politica        (15)
+  seguridad      -> sociedad        (15)
+  internacional  -> sociedad        (15)
+  internacional  -> seguridad       (15)
+
+Sample misclassified headlines (top 12):
+
+- [politica -> deportes] conf=1.00 | El Observador | 2026-06-04 10:08:00
+  Elecciones en el Real Madrid: Riquelme promete a Haaland y Florentino a Mourinho, pero ambos son desmentidos
+  https://www.elobservador.com.uy/espana/relax/elecciones-el-real-madrid-riquelme-promete-haaland-y-lo-desmienten-mientras-florentino-anuncia-mourinho-n6046289
+
+- [politica -> sociedad] conf=0.99 | El Observador | 2026-05-28 08:19:00
+  Diputado colorado propuso usar cuarteles para alojar personas en situaci籀n de calle y que realicen "tareas de apoyo"
+  https://www.elobservador.com.uy/nacional/diputado-colorado-propuso-usar-cuarteles-alojar-personas-situacion-calle-y-que-realicen-tareas-apoyo-n6045507
+
+- [sociedad -> tecnologia] conf=0.99 | El Observador | 2026-05-29 00:00:00
+  La carpintera que venci籀 a la inteligencia artificial: perdi籀 su trabajo, dej籀 los prejuicios y hoy vive de un oficio que las m獺quinas no pueden copiar
+  https://www.elobservador.com.uy/argentina/sociedad/la-carpintera-que-vencio-la-inteligencia-artificial-perdio-su-trabajo-dejo-los-prejuicios-y-hoy-vive-un-oficio-que-las-maquinas-no-pueden-copiar-n6045769
+
+- [economia -> deportes] conf=0.99 | El Observador | 2026-06-04 09:10:00
+  Reventa mundialista: piden fortunas por palcos VIP en el estadio donde Diego hizo el gol de la "mano de Dios"
+  https://www.elobservador.com.uy/espana/economia-y-finanzas/reventa-mundialista-piden-fortunas-palcos-vip-el-estadio-donde-diego-hizo-el-gol-la-mano-dios-n6046254
+
+- [economia -> tecnologia] conf=0.99 | El Observador | 2026-05-28 00:00:00
+  Dos hermanos argentinos crearon una fintech para financiar a repartidores y conductores de apps
+  https://www.elobservador.com.uy/argentina/economia-y-negocios/dos-hermanos-argentinos-crearon-una-fintech-financiar-repartidores-y-conductores-apps-n6045565
+
+- [sociedad -> economia] conf=0.99 | Montevideo Portal | 2026-05-29 12:14:00
+  Llamado laboral en el Mides con sueldo de $ 114.000 por 30 horas semanales
+  https://www.montevideo.com.uy/Noticias/Llamado-laboral-en-el-Mides-con-sueldo-de--114-000-por-30-horas-semanales-uc963603
+
+- [sociedad -> seguridad] conf=0.98 | El Observador | 2026-05-28 20:37:00
+  Encuesta de Equipos muestra "incremento significativo" en la cantidad de uruguayos que ven a la inseguridad como el principal problema del pa穩s
+  https://www.elobservador.com.uy/nacional/hubo-un-incremento-significativo-la-cantidad-uruguayos-que-creen-que-la-inseguridad-es-el-principal-problema-del-pais-segun-ultima-encuesta-equipos-n6045612
+
+- [seguridad -> cultura] conf=0.98 | El Observador | 2026-05-26 13:56:00
+  Con exhibiciones de Masha y el oso y 聶Qui矇n son los Miller?, INR inaugur籀 una sala de cine para reclusos del Comcar
+  https://www.elobservador.com.uy/nacional/con-exhibiciones-masha-y-el-oso-y-quien-son-los-miller-inr-inauguro-una-sala-cine-reclusos-del-comcar-n6045271
+
+- [politica -> economia] conf=0.98 | El Pa穩s | 2026-06-03 17:41:17
+  Parlamento aprueba Uruguay Impulsa, programa con 5.500 puestos de trabajo para el que ya se abrieron inscripciones
+  https://www.elpais.com.uy/informacion/politica/parlamento-aprueba-uruguay-impulsa-programa-con-5-500-puestos-de-trabajo-para-el-que-ya-se-abrieron-inscripciones
+
+- [tecnologia -> economia] conf=0.98 | El Observador | 2026-05-28 09:33:00
+  El sector tecnol籀gico espa簽ol se consolida: crece un 20% y roza las 10.300 empresas
+  https://www.elobservador.com.uy/espana/empresas-y-negocios/el-sector-tecnologico-espanol-se-consolida-crece-un-20-y-roza-las-10300-empresas-n6045492
+
+- [politica -> seguridad] conf=0.98 | Montevideo Portal | 2026-05-26 16:30:00
+  Garc穩a critic籀 que Negro ?o contesta??por triple homicidio: desde FA explicaron motivos
+  https://www.montevideo.com.uy/Noticias/Garcia-critico-que-Negro-no-contesta-por-triple-homicidio-desde-FA-explicaron-motivos-uc963280
+
+- [internacional -> salud] conf=0.98 | El Pa穩s | 2026-06-04 03:15:00
+  El plan de Washington ante la emergencia de la OMS por el 矇bola y las diferencias con el Departamento de Salud
+  https://www.elpais.com.uy/mundo/estados-unidos/el-plan-de-washington-ante-la-emergencia-de-la-oms-por-el-ebola-y-las-diferencias-con-el-departamento-de-salud
+
+Loading weights:   0%|          | 0/138 [00:00<?, ?it/s]
+Loading weights: 100%|??????????| 138/138 [00:00<00:00, 9201.11it/s]
+
+=== CARGA ===
+Test rows: 1801 | Errors: 353 (19.6%)
+Model: C:\Users\arihs\Code\mlprod-obligatorio\models\carga-phase3
+
+Confusion pairs (true -> pred):
+  media          -> baja            (142)
+  baja           -> media           (126)
+  alta           -> media           (65)
+  media          -> alta            (17)
+  alta           -> baja            (3)
+
+Sample misclassified headlines (top 12):
+
+- [media -> baja] conf=1.00 | La Diaria | 2026-06-01 00:00:00
+  El Fondo Nacional de Recursos como fondo marcado. Parte II
+  https://ladiaria.com.uy/economia/articulo/2026/6/el-fondo-nacional-de-recursos-como-fondo-marcado-parte-ii/
+
+- [baja -> media] conf=1.00 | El Observador | 2026-06-01 05:00:00
+  La econom穩a de 2026 pisa el freno: expertos consolidan el recorte en las proyecciones del PIB
+  https://www.elobservador.com.uy/economia-y-empresas/la-economia-2026-pisa-el-freno-expertos-consolidan-el-recorte-las-proyecciones-del-pib-n6045732
+
+- [baja -> media] conf=1.00 | Montevideo Portal | 2026-05-28 21:15:00
+  Principales problemas de la ciudadan穩a: m獺s de la mitad se preocupa por la inseguridad
+  https://www.montevideo.com.uy/Noticias/Principales-problemas-de-la-ciudadania-mas-de-la-mitad-se-preocupa-por-la-inseguridad-uc963565
+
+- [media -> baja] conf=1.00 | El Observador | 2026-05-29 12:19:00
+  La l穩nea G de Coetc dejar獺 de existir y recupera su numeraci籀n original
+  https://www.elobservador.com.uy/nacional/la-linea-g-coetc-dejara-existir-y-recupera-su-numeracion-original-n6045693
+
+- [baja -> media] conf=1.00 | El Observador | 2026-05-30 16:54:00
+  "Cuando hay descuentos yo me tiro de cabeza", dijo Orsi sobre la rebaja de US$ 25.000 de su camioneta
+  https://www.elobservador.com.uy/nacional/cuando-hay-descuentos-yo-me-tiro-cabeza-dijo-orsi-la-rebaja-us-25000-su-camioneta-n6045809
+
+- [media -> baja] conf=1.00 | La Diaria | 2026-06-03 10:11:07
+  Horacio Merlo: ?a cultura siempre es la cenicienta, pero hay que salir y hacer??
+  https://ladiaria.com.uy/paysandu/articulo/2026/6/horacio-merlo-la-cultura-siempre-es-la-cenicienta-pero-hay-que-salir-y-hacer/
+
+- [baja -> media] conf=1.00 | Montevideo Portal | 2026-05-27 09:37:00
+  DGI refuerza controles a contribuyentes de IRAE: qu矇 hace ante ?asos con inconsistencias??
+  https://www.montevideo.com.uy/Noticias/DGI-refuerza-controles-a-contribuyentes-de-IRAE-que-hace-ante-casos-con-inconsistencias--uc963343
+
+- [baja -> media] conf=1.00 | El Observador | 2026-05-27 20:05:00
+  Los coches el矇ctricos ya rozan el 70% del mercado en la UE ante el desplome de la gasolina y el di矇sel
+  https://www.elobservador.com.uy/espana/economia-y-finanzas/los-coches-electricos-ya-rozan-el-70-del-mercado-la-ue-el-desplome-la-gasolina-y-el-diesel-n6045352
+
+- [media -> baja] conf=1.00 | El Pa穩s | 2026-06-04 18:53:00
+  Papel籀n en los Influencers Awards Uruguay: dos famosos fueron descubiertos llev獺ndose platos de postres del sal籀n
+  https://www.elpais.com.uy/tvshow/personajes/papelon-en-los-influencers-awards-uruguay-dos-famosos-fueron-descubiertos-llevandose-platos-de-postres-del-salon
+
+- [media -> baja] conf=1.00 | El Observador | 2026-06-02 05:00:00
+  Un dormitorio: el nuevo rey de la Vivienda Promovida que desplaz籀 al formato familiar
+  https://www.elobservador.com.uy/economia-y-empresas/un-dormitorio-el-nuevo-rey-la-vivienda-promovida-que-desplazo-al-formato-familiar-n6045957
+
+- [baja -> media] conf=1.00 | La Diaria | 2026-06-03 21:33:12
+  ?omo un Plan Ceibal??de inteligencia artificial: Bordaberry propone institucionalidad que evite acceso ?esigual??de estudiantes
+  https://ladiaria.com.uy/politica/articulo/2026/6/como-un-plan-ceibal-de-inteligencia-artificial-bordaberry-propone-institucionalidad-que-evite-acceso-desigual-de-estudiantes/
+
+- [media -> baja] conf=1.00 | Montevideo Portal | 2026-05-27 11:39:00
+  Fratti: ?omenaje a Mujica se lo hacemos a diario pero no compramos campo para homenajear??
+  https://www.montevideo.com.uy/Noticias/Fratti--Homenaje-a-Mujica-se-lo-hacemos-a-diario-pero-no-compramos-campo-para-homenajear--uc963363
+
+Exported errors to data\exports\test_errors.csv

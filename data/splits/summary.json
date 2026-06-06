@@ -1,0 +1,94 @@
+{
+  "source": "data/exports/headlines_20260605.csv",
+  "total_rows": 12005,
+  "splits": {
+    "train": {
+      "rows": 8403,
+      "date_min": "1991-09-19 00:00:00",
+      "date_max": "2026-05-13 14:21:00"
+    },
+    "val": {
+      "rows": 1801,
+      "date_min": "2026-05-13 14:26:00",
+      "date_max": "2026-05-26 12:50:00"
+    },
+    "test": {
+      "rows": 1801,
+      "date_min": "2026-05-26 12:52:00",
+      "date_max": "2026-06-05 00:19:59"
+    }
+  },
+  "temas": {
+    "train": {
+      "rows": 8403,
+      "labels": {
+        "politica": 1850,
+        "sociedad": 1276,
+        "seguridad": 1228,
+        "economia": 1044,
+        "internacional": 813,
+        "deportes": 719,
+        "medioambiente": 507,
+        "cultura": 475,
+        "salud": 325,
+        "tecnologia": 166
+      }
+    },
+    "val": {
+      "rows": 1801,
+      "labels": {
+        "deportes": 340,
+        "economia": 258,
+        "politica": 252,
+        "seguridad": 250,
+        "sociedad": 243,
+        "internacional": 185,
+        "medioambiente": 80,
+        "salud": 69,
+        "cultura": 67,
+        "tecnologia": 57
+      }
+    },
+    "test": {
+      "rows": 1801,
+      "labels": {
+        "deportes": 315,
+        "economia": 293,
+        "politica": 284,
+        "seguridad": 233,
+        "sociedad": 210,
+        "internacional": 181,
+        "cultura": 99,
+        "medioambiente": 75,
+        "tecnologia": 60,
+        "salud": 51
+      }
+    }
+  },
+  "carga": {
+    "train": {
+      "rows": 8403,
+      "labels": {
+        "media": 4930,
+        "baja": 2649,
+        "alta": 824
+      }
+    },
+    "val": {
+      "rows": 1801,
+      "labels": {
+        "media": 906,
+        "baja": 691,
+        "alta": 204
+      }
+    },
+    "test": {
+      "rows": 1801,
+      "labels": {
+        "media": 880,
+        "baja": 740,
+        "alta": 181
+      }
+    }
+  }
+}

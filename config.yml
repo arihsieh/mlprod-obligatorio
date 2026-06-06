@@ -15,6 +15,117 @@ classification_model: "gpt-5.4-mini"
 prompt_model: "gpt-5.5"
 classification_batch_size: 25
 
+training:
+  model_id: "jhu-clsp/mmBERT-small"
+  cache_dir: "models/cache"
+  max_length: 128
+  input:
+    include_seccion: true
+    separator: " | "
+    template: "{seccion}{sep}{titulo}"
+  split:
+    train_ratio: 0.70
+    val_ratio: 0.15
+  hyperparameters:
+    num_train_epochs: 5
+    per_device_train_batch_size: 32
+    per_device_eval_batch_size: 64
+    learning_rate: 2.0e-5
+    warmup_ratio: 0.1
+    weight_decay: 0.01
+    logging_steps: 17
+    logging_first_step: true
+    fp16: true
+    seed: 42
+  wandb:
+    enabled: true
+    project: "mindful-news"
+  tuning:
+    n_trials: 15
+    study_name_template: "{task}-mmbert"
+    wandb_group_template: "{task}-optuna"
+    search_space:
+      learning_rate_min: 1.0e-5
+      learning_rate_max: 5.0e-5
+      batch_sizes: [16, 32, 64]
+      epochs_min: 3
+      epochs_max: 8
+      warmup_min: 0.05
+      warmup_max: 0.2
+      weight_decay_min: 0.0
+      weight_decay_max: 0.1
+    phase2:
+      n_trials: 30
+      study_name_template: "{task}-mmbert-phase2"
+      wandb_group_template: "{task}-optuna-v2"
+      temas:
+        # Phase 1 best: lr 3.6e-5, batch 32, epochs 5, warmup 0.09, wd 0.075
+        learning_rate_min: 2.5e-5
+        learning_rate_max: 5.0e-5
+        batch_sizes: [24, 32, 48]
+        epochs_min: 4
+        epochs_max: 6
+        warmup_min: 0.05
+        warmup_max: 0.12
+        weight_decay_min: 0.05
+        weight_decay_max: 0.10
+      carga:
+        # Phase 1 best: lr 2.6e-5, batch 16, epochs 3, warmup 0.05, wd 0.005
+        learning_rate_min: 1.5e-5
+        learning_rate_max: 3.5e-5
+        batch_sizes: [16, 24]
+        epochs_min: 2
+        epochs_max: 5
+        warmup_min: 0.03
+        warmup_max: 0.10
+        weight_decay_min: 0.0
+        weight_decay_max: 0.05
+    phase3:
+      n_trials: 15
+      study_name_template: "{task}-mmbert-phase3"
+      wandb_group_template: "{task}-optuna-v3"
+      anchors: [1]
+      temas:
+        # Phase 2 missed: chased val with batch 48 / 6 epochs. Phase 1 test winner:
+        # lr 3.6e-5, batch 32, epochs 5, warmup 0.09, wd 0.075. Avoid batch 64, high warmup, low wd.
+        learning_rate_min: 3.0e-5
+        learning_rate_max: 4.8e-5
+        batch_sizes: [32]
+        epochs_min: 4
+        epochs_max: 5
+        warmup_min: 0.06
+        warmup_max: 0.10
+        weight_decay_min: 0.065
+        weight_decay_max: 0.098
+      carga:
+        # Phase 2 missed: batch 24 + 2 epochs overfit val. Phase 1 test winner:
+        # lr 2.6e-5, batch 16, epochs 3, warmup 0.05, wd 0.005. Avoid batch 64, high wd, many epochs.
+        learning_rate_min: 2.1e-5
+        learning_rate_max: 2.9e-5
+        batch_sizes: [16]
+        epochs_min: 3
+        epochs_max: 4
+        warmup_min: 0.045
+        warmup_max: 0.065
+        weight_decay_min: 0.0
+        weight_decay_max: 0.012
+    phase4:
+      n_trials: 30
+      study_name_template: "{task}-mmbert-phase4"
+      wandb_group_template: "{task}-optuna-v4"
+      anchors: [1]
+      temas:
+        # Input = seccion | titulo. Re-search around phase-1 winner hyperparams.
+        learning_rate_min: 2.5e-5
+        learning_rate_max: 5.0e-5
+        batch_sizes: [16, 32, 48]
+        epochs_min: 3
+        epochs_max: 6
+        warmup_min: 0.05
+        warmup_max: 0.12
+        weight_decay_min: 0.04
+        weight_decay_max: 0.10
+
 sources:
   montevideo_portal:
     name: "Montevideo Portal"
