@@ -1,0 +1,83 @@
+# Production stack for a single EC2 instance (Learner Lab).
+# Usage: docker compose -f docker-compose.prod.yml up --build -d
+# Optional poller: docker compose -f docker-compose.prod.yml --profile poller up -d
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: mindful-news-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: mindful_news
+      MYSQL_USER: mindful
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-mindful}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    container_name: mindful-news-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models/temas-phase4:/app/models/temas-phase4:ro
+      - ./models/carga-phase3:/app/models/carga-phase3:ro
+    environment:
+      MODEL_TEMAS_PATH: /app/models/temas-phase4
+      MODEL_CARGA_PATH: /app/models/carga-phase3
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 180s
+      retries: 3
+
+  portal:
+    build:
+      context: .
+      dockerfile: Dockerfile.portal
+    container_name: mindful-news-portal
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      API_BASE_URL: http://api:8000
+      DB_HOST: mysql
+      DB_USER: mindful
+      DB_PASSWORD: ${MYSQL_PASSWORD:-mindful}
+      DB_NAME: mindful_news
+    depends_on:
+      mysql:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+
+  poller:
+    profiles: ["poller"]
+    build:
+      context: .
+      dockerfile: Dockerfile.portal
+    container_name: mindful-news-poller
+    restart: unless-stopped
+    command: ["python", "scripts/run_poller.py", "--interval-hours", "1"]
+    environment:
+      API_BASE_URL: http://api:8000
+      DB_HOST: mysql
+      DB_USER: mindful
+      DB_PASSWORD: ${MYSQL_PASSWORD:-mindful}
+      DB_NAME: mindful_news
+    depends_on:
+      mysql:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+
+volumes:
+  mysql_data:

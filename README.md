@@ -129,6 +129,31 @@ python scripts/run_poller.py                 # loop cada 1 h
 
 El poller toma titulares sin clasificar de MySQL, los manda a `POST /predict/batch` y guarda `tema`/`carga` del modelo ML.
 
+### Probar pipeline local (antes de AWS)
+
+```bash
+# Terminal 1 — MySQL
+docker compose up -d mysql
+
+# Terminal 2 — API
+python scripts/run_api.py
+
+# Terminal 3 — test end-to-end
+# Opción A: titulares sintéticos (rápido, sin Playwright)
+python scripts/test_pipeline_local.py --fake 5
+
+# Opción B: scrape real mínimo + clasificar
+python scripts/test_pipeline_local.py --scrape-limit 2
+
+# Opción C: ambos
+python scripts/test_pipeline_local.py --fake 3 --scrape-limit 2
+
+# Terminal 4 — portal
+python scripts/run_portal.py
+```
+
+El script verifica MySQL → API `/ready` → ingesta → batch → muestra titulares clasificados.
+
 ## Docker — stack completo
 
 Requiere modelos entrenados en `models/temas-phase4/` y `models/carga-phase3/`.
@@ -161,7 +186,22 @@ docker compose --profile poller up -d     # + poller horario
 Solo MySQL: `docker compose up -d mysql`  
 Solo API: `docker compose up --build api`
 
-Variables útiles (`.env`): `API_BASE_URL`, `DB_HOST`, `MODEL_TEMAS_PATH`, `MODEL_CARGA_PATH`.
+### EC2 (Learner Lab — sin Lightsail)
+
+Guía paso a paso: **[deploy/README.md](./deploy/README.md)**
+
+Resumen: **1× EC2 t3.large + Docker Compose** (`docker-compose.prod.yml`).
+
+```bash
+# En EC2 (Ubuntu 22.04)
+bash deploy/ec2-setup.sh
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+Desde Windows, empaquetar modelos: `.\scripts\pack_models.ps1`
+
+Variables útiles (`.env`): `API_BASE_URL`, `DB_HOST`, `MODEL_TEMAS_PATH`, `MODEL_CARGA_PATH`.  
+**No commitees** credenciales AWS del Learner Lab.
 
 ## Layout
 
