@@ -18,9 +18,9 @@ from mindful_news.portal.poller import run_hourly_pipeline
 def main() -> None:
     parser = argparse.ArgumentParser(description="Scrape and classify headlines hourly.")
     parser.add_argument("--once", action="store_true", help="Run one cycle and exit")
-    parser.add_argument("--interval-hours", type=float, default=1.0)
+    parser.add_argument("--interval-hours", type=float, default=0.5)
     parser.add_argument("--scrape-limit", type=int, default=None)
-    parser.add_argument("--classify-limit", type=int, default=200)
+    parser.add_argument("--classify-limit", type=int, default=None, help="Max per batch; default=all pending")
     args = parser.parse_args()
 
     cfg = load_config()

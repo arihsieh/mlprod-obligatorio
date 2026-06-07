@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -56,11 +57,16 @@ _FAVICON_SVG = """\
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     global _classifier
-    try:
-        init_db()
-        seed_from_splits_if_needed()
-    except Exception:  # noqa: BLE001 — DB may not be available in all envs
-        pass
+    for attempt in range(10):
+        try:
+            init_db()
+            seed_from_splits_if_needed()
+            break
+        except Exception:  # noqa: BLE001 — DB may not be ready yet
+            if attempt == 9:
+                pass
+            else:
+                time.sleep(5)
     _classifier = NewsClassifier()
     yield
     _classifier = None

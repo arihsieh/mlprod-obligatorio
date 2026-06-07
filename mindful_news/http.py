@@ -9,6 +9,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from mindful_news.dates import parse_iso, parse_mvd_date, parse_spanish_long_date
+from mindful_news.thumbnails import clean_thumbnail
 
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -67,10 +68,12 @@ def meta_from_html(html: str) -> dict[str, Any]:
                 break
         except json.JSONDecodeError:
             continue
+    thumbnail = (og_image.get("content") if og_image else None) or (
+        json_ld.get("image")[0] if isinstance(json_ld.get("image"), list) else json_ld.get("image")
+    )
     return {
         "titulo": title.get_text(strip=True) if title else json_ld.get("headline"),
-        "thumbnail_url": (og_image.get("content") if og_image else None)
-        or (json_ld.get("image")[0] if isinstance(json_ld.get("image"), list) else json_ld.get("image")),
+        "thumbnail_url": clean_thumbnail(thumbnail),
         "fecha": (
             parse_iso(published.get("content") if published else None)
             or parse_iso(time_el.get("datetime") if time_el else None)
@@ -107,9 +110,18 @@ def fetch_mvd_article(article_id: int, sess: requests.Session | None = None) -> 
     meta = meta_from_html(response.text)
     if not meta.get("titulo"):
         return None
+    meta["thumbnail_url"] = clean_thumbnail(meta.get("thumbnail_url"))
     meta["external_id"] = str(article_id)
     meta["url"] = normalize_url(response.url)
     return meta
+
+
+def _la_diaria_photo_from_html(html: str) -> str | None:
+    match = re.search(
+        r"https://ladiaria\.com\.uy/media/photologue/photos/cache/[^\s\"'<>]+",
+        html,
+    )
+    return clean_thumbnail(match.group(0)) if match else None
 
 
 def fetch_eo_article(article_id: int, sess: requests.Session | None = None) -> dict[str, Any] | None:
@@ -126,9 +138,7 @@ def fetch_eo_article(article_id: int, sess: requests.Session | None = None) -> d
     meta = meta_from_html(response.text)
     if not meta.get("titulo"):
         return None
-    thumb = meta.get("thumbnail_url") or ""
-    if "lazy" in thumb or "mtg_image" in thumb:
-        meta["thumbnail_url"] = None
+    meta["thumbnail_url"] = clean_thumbnail(meta.get("thumbnail_url"))
     meta["external_id"] = str(article_id)
     meta["url"] = normalize_url(response.url)
     parts = response.url.split("elobservador.com.uy/")
@@ -148,9 +158,8 @@ def fetch_la_diaria_article(url: str, sess: requests.Session | None = None) -> d
     meta = meta_from_html(response.text)
     if not meta.get("titulo"):
         return None
-    thumb = meta.get("thumbnail_url") or ""
-    if "la-diaria-1200x630" in thumb or "static/meta" in thumb:
-        meta["thumbnail_url"] = None
+    if not meta.get("thumbnail_url"):
+        meta["thumbnail_url"] = _la_diaria_photo_from_html(response.text)
     meta["url"] = normalize_url(full_url)
     meta["external_id"] = meta["url"]
     parts = full_url.split("/")

@@ -1274,7 +1274,7 @@ function renderItems(rows, { replace = true, startIndex = 0 } = {}) {
     const tm = TOPICS[row.tema]  || { label:row.tema,  icon:'newspaper', bg:'linear-gradient(135deg,#f1f5f9,#e2e8f0)', ic:'#64748b' };
     const cm = CARGAS[row.carga] || { label:row.carga };
     const dt = row.fecha || row.scraped_at;
-    const ds = dt ? new Date(dt).toLocaleDateString('es-UY',{day:'numeric',month:'short'}) : '';
+    const ds = formatUyDateTime(dt);
     const delay = Math.min((startIndex + i) * 35, 700);
 
     const imgSection = row.thumbnail_url
@@ -1335,6 +1335,21 @@ function closeGuide() { document.getElementById('guideOverlay').classList.add('h
 function handleOverlayClick(e) { if (e.target === e.currentTarget) closeGuide(); }
 
 /* ── Utils ──────────────────────────────────────────────────────────────── */
+function formatUyDateTime(value) {
+  if (!value) return '';
+  let raw = String(value).trim();
+  if (!raw) return '';
+  if (!raw.includes('T')) raw = raw.replace(' ', 'T');
+  if (!/[Z+-]\d{2}/.test(raw)) raw += 'Z';
+  return new Date(raw).toLocaleString('es-UY', {
+    timeZone: 'America/Montevideo',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 function html(s) { const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
 function attr(s) { return String(s).replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 function escHtml(s) { return html(s); }

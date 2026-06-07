@@ -179,6 +179,44 @@ def fetch_unclassified(limit: int | None = None) -> list[dict]:
             return list(cursor.fetchall())
 
 
+def fetch_needing_enrichment(limit: int | None = None) -> list[dict]:
+    query = """
+        SELECT id, url, medio, external_id
+        FROM headlines
+        WHERE thumbnail_url IS NULL OR thumbnail_url = '' OR fecha IS NULL
+        ORDER BY scraped_at DESC, id ASC
+    """
+    if limit is not None:
+        query += " LIMIT %s"
+    with connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(query, (limit,) if limit is not None else ())
+            return list(cursor.fetchall())
+
+
+def max_numeric_external_id(medio: str) -> int | None:
+    with connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT MAX(CAST(external_id AS UNSIGNED)) AS max_id
+                FROM headlines
+                WHERE medio = %s AND external_id REGEXP '^[0-9]+$'
+                """,
+                (medio,),
+            )
+            row = cursor.fetchone()
+            value = row["max_id"] if row else None
+            return int(value) if value is not None else None
+
+
+def fetch_urls_for_medio(medio: str) -> set[str]:
+    with connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT url FROM headlines WHERE medio = %s", (medio,))
+            return {row["url"] for row in cursor.fetchall()}
+
+
 def count_unclassified() -> int:
     with connection() as conn:
         with conn.cursor() as cursor:
@@ -278,7 +316,7 @@ def fetch_headlines(
         SELECT id, titulo, url, thumbnail_url, medio, seccion, fecha, tema, carga, scraped_at
         FROM headlines
         WHERE {where}
-        ORDER BY COALESCE(fecha, scraped_at) DESC, id DESC
+        ORDER BY GREATEST(COALESCE(fecha, scraped_at), scraped_at) DESC, id DESC
         LIMIT %s OFFSET %s
     """
     params.extend([limit, offset])

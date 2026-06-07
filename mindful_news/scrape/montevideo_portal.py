@@ -138,7 +138,9 @@ def scrape_latest(logger: Logger, limit: int) -> list[Headline]:
             time.sleep(0.6)
         return _to_headlines(page.evaluate(EXTRACT_JS))
 
-    headlines = dedupe_headlines(with_page(run))
+    from mindful_news.enrich import enrich_headlines
+
+    headlines = enrich_headlines(dedupe_headlines(with_page(run)), logger)
     headlines.sort(key=lambda h: int(h.external_id or "0"), reverse=True)
     logger.info("MVD latest: %d", min(len(headlines), limit))
     return headlines[:limit]

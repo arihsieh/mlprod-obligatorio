@@ -32,10 +32,17 @@ LISTING_JS = """
         seen.add(url);
         const img = article.querySelector('img');
         const timeNode = article.querySelector('.article__time-ago, time');
+        let thumb = null;
+        if (img) {
+            thumb = img.currentSrc || img.src || img.dataset.src || img.dataset.lazySrc || null;
+            if (!thumb && img.srcset) {
+                thumb = img.srcset.split(',')[0].trim().split(' ')[0];
+            }
+        }
         results.push({
             url,
             titulo: titleNode.textContent.trim(),
-            thumbnail_url: img ? (img.src || img.dataset.src) : null,
+            thumbnail_url: thumb,
             seccion: url.split('/')[3] || null,
             fecha_raw: timeNode ? timeNode.textContent.trim() : null,
         });
@@ -106,16 +113,22 @@ def _iter_article_sitemap_urls():
                 yield normalized
 
 
-def _listing_thumbnails(logger: Logger) -> dict[str, str]:
+HOURLY_SECTIONS = ["politica", "mundo", "economia", "deporte", "cultura", "justicia"]
+
+
+def _listing_thumbnails(logger: Logger, *, hourly: bool = False) -> dict[str, str]:
+    sections = HOURLY_SECTIONS if hourly else SECTIONS
+    pages = [LISTING_URL] + [f"https://ladiaria.com.uy/{s}/" for s in sections]
+
     def run(page: Page) -> dict[str, str]:
         thumbs: dict[str, str] = {}
-        pages = [LISTING_URL] + [f"https://ladiaria.com.uy/{s}/" for s in SECTIONS]
         for url in pages:
             page.goto(url, wait_until="domcontentloaded", timeout=60_000)
             time.sleep(0.4)
             for item in page.evaluate(LISTING_JS):
-                if item.get("thumbnail_url"):
-                    thumbs[normalize_url(item["url"])] = item["thumbnail_url"]
+                thumb = item.get("thumbnail_url")
+                if thumb and not thumb.startswith("data:"):
+                    thumbs[normalize_url(item["url"])] = thumb
         return thumbs
 
     thumbs = with_page(run)
@@ -123,15 +136,16 @@ def _listing_thumbnails(logger: Logger) -> dict[str, str]:
     return thumbs
 
 
-def _build_from_sitemap(target: int, logger: Logger) -> list[Headline]:
+def _headlines_from_sitemap(limit: int | None = None) -> list[Headline]:
     news_meta = _load_news_sitemap_meta()
-    thumbs = _listing_thumbnails(logger)
+    sorted_urls = sorted(
+        news_meta.keys(),
+        key=lambda url: news_meta[url].get("fecha") or _fecha_from_url(url) or 0,
+        reverse=True,
+    )
     headlines: list[Headline] = []
-
-    for url in _iter_article_sitemap_urls():
-        if len(headlines) >= target:
-            break
-        meta = news_meta.get(url, {})
+    for url in sorted_urls:
+        meta = news_meta[url]
         slug = url.rstrip("/").split("/")[-1]
         titulo = meta.get("titulo") or _slug_to_title(slug)
         if not titulo or titulo.lower() == "terminos y condiciones":
@@ -142,15 +156,36 @@ def _build_from_sitemap(target: int, logger: Logger) -> list[Headline]:
                 external_id=url,
                 titulo=titulo,
                 url=url,
-                thumbnail_url=thumbs.get(url),
+                thumbnail_url=None,
                 medio=MEDIO,
                 seccion=seccion,
                 fecha=meta.get("fecha") or _fecha_from_url(url),
             )
         )
+        if limit is not None and len(headlines) >= limit:
+            break
+    return headlines
 
-    headlines.sort(key=lambda h: h.fecha.timestamp() if h.fecha else 0, reverse=True)
-    logger.info("La Diaria bulk: %d headlines", len(headlines))
+
+def _attach_listing_thumbnails(
+    headlines: list[Headline], logger: Logger, *, hourly: bool = False
+) -> list[Headline]:
+    if not headlines:
+        return headlines
+    try:
+        thumbs = _listing_thumbnails(logger, hourly=hourly)
+    except Exception as exc:  # noqa: BLE001 — playwright may be unavailable locally
+        logger.warning("La Diaria listing thumbnails skipped: %s", exc)
+        return headlines
+    for headline in headlines:
+        if not headline.thumbnail_url:
+            headline.thumbnail_url = thumbs.get(normalize_url(headline.url))
+    return headlines
+
+
+def _build_from_sitemap(target: int, logger: Logger) -> list[Headline]:
+    headlines = _headlines_from_sitemap(limit=target)
+    headlines = _attach_listing_thumbnails(headlines, logger, hourly=False)
     return headlines[:target]
 
 
@@ -182,19 +217,10 @@ def scrape_bulk(logger: Logger, target: int) -> list[Headline]:
 
 
 def scrape_latest(logger: Logger, limit: int) -> list[Headline]:
-    def run(page: Page) -> list[Headline]:
-        page.goto(LISTING_URL, wait_until="domcontentloaded", timeout=60_000)
-        time.sleep(1)
-        items = _listing_to_headlines(page.evaluate(LISTING_JS))
-        for section in SECTIONS[:8]:
-            if len(items) >= limit:
-                break
-            page.goto(f"https://ladiaria.com.uy/{section}/", wait_until="domcontentloaded")
-            time.sleep(0.5)
-            items.extend(_listing_to_headlines(page.evaluate(LISTING_JS)))
-        return items
+    headlines = _headlines_from_sitemap(limit=limit)
+    headlines = _attach_listing_thumbnails(headlines, logger, hourly=True)
+    from mindful_news.enrich import enrich_headlines
 
-    headlines = list({h.url: h for h in with_page(run)}.values())
-    headlines.sort(key=lambda h: h.fecha.timestamp() if h.fecha else 0, reverse=True)
-    logger.info("La Diaria latest: %d", min(len(headlines), limit))
-    return headlines[:limit]
+    headlines = enrich_headlines(headlines, logger)
+    logger.info("La Diaria latest: %d", len(headlines))
+    return headlines

@@ -10,6 +10,8 @@ COPY requirements.txt requirements-ml.txt requirements-api.txt ./
 RUN pip install --no-cache-dir -r requirements-api.txt
 
 COPY mindful_news/ mindful_news/
+COPY portal/index.html portal/index.html
+COPY data/splits/ data/splits/
 COPY config.yml .
 COPY scripts/run_api.py scripts/run_api.py
 

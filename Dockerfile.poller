@@ -1,0 +1,16 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt requirements-poller.txt ./
+RUN pip install --no-cache-dir -r requirements-poller.txt \
+    && playwright install chromium --with-deps
+
+COPY mindful_news/ mindful_news/
+COPY config.yml .
+COPY scripts/run_poller.py scripts/run_poller.py
+
+ENV API_BASE_URL=http://api:8000
+ENV DB_HOST=mysql
+
+CMD ["python", "scripts/run_poller.py", "--interval-hours", "0.5"]

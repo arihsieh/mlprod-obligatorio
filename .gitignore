@@ -9,3 +9,6 @@ models/tuning/
 wandb/
 *.db
 .DS_Store
+deploy/*.pem
+deploy/instance.env
+models-deploy.tar.gz

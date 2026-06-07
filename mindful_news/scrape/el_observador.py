@@ -128,7 +128,8 @@ def scrape_latest(logger: Logger, limit: int) -> list[Headline]:
         time.sleep(1)
         return _to_headlines(page.evaluate(LISTING_JS))
 
-    headlines = with_page(run)
-    enriched = _backfill(headlines, min(limit, len(headlines) + 20), logger)
-    enriched.sort(key=lambda h: h.fecha.timestamp() if h.fecha else 0, reverse=True)
-    return enriched[:limit]
+    from mindful_news.enrich import enrich_headlines
+
+    headlines = enrich_headlines(with_page(run), logger)
+    headlines.sort(key=lambda h: h.fecha.timestamp() if h.fecha else 0, reverse=True)
+    return headlines[:limit]
